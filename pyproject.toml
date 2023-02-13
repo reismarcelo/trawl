@@ -5,6 +5,9 @@ build-backend = "hatchling.build"
 [project]
 name = "trawl"
 description = "Capture CLI commands and search for configurable patterns"
+authors = [
+  { name = "Marcelo Reis", email = "mareis@cisco.com" },
+]
 license = "MIT"
 classifiers = [
     "Programming Language :: Python :: 3 :: Only",

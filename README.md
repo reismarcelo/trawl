@@ -1,17 +1,17 @@
-# SDWAN Configuration Builder
+# Trawl - Capture CLI commands and search for configurable patterns
 
 ## Installation
 
-SDWAN config builder requires Python 3.8 or newer. This can be verified by pasting the following to a terminal window:
+Trawl requires Python 3.8 or newer. This can be verified by pasting the following to a terminal window:
 ```
 % python3 -c "import sys;assert sys.version_info>(3,8)" && echo "ALL GOOD"
 ```
 
 If 'ALL GOOD' is printed it means Python requirements are met. If not, download and install the latest 3.x version at Python.org (https://www.python.org/downloads/).
 
-Go to the sdwan_config_builder directory and create a virtual environment
+Go to the trawl directory and create a virtual environment
 ```
-% cd sdwan_config_builder
+% cd trawl
 % python3 -m venv venv
 ```
 
@@ -27,48 +27,91 @@ Upgrade built-in virtual environment packages:
 (venv) % pip install --upgrade pip setuptools
 ```
 
-Install config builder:
+Install trawl:
 ```
 (venv) % pip install --upgrade .
 ```
 
-Validate that config builder is installed:
+Validate that trawl is installed:
 ```
-(venv) % sdwan_config_build --version
-SDWAN Config Builder Tool Version 0.7
+(venv) % trawl --version
+Trawl Version 1.0
 ```
 
 ## Running
 
-The metadata file defines the location of the source configuration file, jinja2 templates, and where the output files 
-should be saved. By default sdwan_config_build look for a 'metadata.yaml' file in the same directory where it is run. 
-The CONFIG_BUILDER_METADATA environment variable can be used to specify a custom location for the metadata file.
+A yaml spec file is used to define target devices and commands to execute. There is an example of this file under examples/trawl_spec.yml.
 
+You can use the -h (or --help) to navigate across the contextual help.
 ```
-(venv) % % sdwan_config_build --help   
-usage: sdwan_config_build [-h] [--version] {render,export,schema} ...
+(venv) % trawl --help 
+usage: trawl [-h] [--version] {apply,preview,schema} ...
 
-SDWAN Config Builder Tool
+Trawl - Capture cli commands and search for configurable patterns
 
 options:
   -h, --help            show this help message and exit
   --version             show program's version number and exit
 
 commands:
-  {render,export,schema}
-    render              render configuration files
-    export              export source configuration as JSON file
-    schema              generate source configuration JSON schema
+  {apply,preview,schema}
+    apply               apply commands as per spec file
+    preview             preview commands as per spec file
+    schema              generate spec file JSON schema
+    
+
+(venv) % trawl apply -h 
+usage: trawl apply [-h] [-u <user>] [-p <password>] [-f <filename>] [-s <filename>]
+
+options:
+  -h, --help            show this help message and exit
+  -u <user>, --user <user>
+                        username, can also be defined via TRAWL_USER environment variable. If neither is provided prompt for username.
+  -p <password>, --password <password>
+                        password, can also be defined via TRAWL_PASSWORD environment variable. If neither is provided prompt for password.
+  -f <filename>, --file <filename>
+                        spec file containing instructions to execute (default: trawl_spec.yml)
+  -s <filename>, --save <filename>
+                        save output from commands to file (default: output_20230213.txt)
+
 ```
 
-To build the configuration files use render command:
+The preview option can be used to validate all actions without connecting to any device:
 ```
-(venv) % sdwan_config_build render --update
-INFO: Rendered Ansible day_-1 vars: 'day-1_local.j2' -> '../ansible/day_-1/group_vars/all/local.yml'
-INFO: Rendered Ansible day_0 vars: 'day0_local.j2' -> '../ansible/day_0/group_vars/all/local.yml'
-INFO: Rendered Ansible day_1 vars: 'day1_local.j2' -> '../ansible/day_1/group_vars/all/local.yml'
-INFO: Rendered Ansible SDWAN inventory: 'sdwan_inventory.j2' -> '../ansible/inventory/sdwan_inventory.yml'
+(venv) % trawl preview
+INFO: [Preview][r1] Starting session to 10.85.58.240
+INFO: [Preview][r1] Sending 'show log'
+INFO: [Preview][r1] Check command output for pattern '%PKT_INFRA-LINK'
+INFO: [Preview][r1] Closed session
+INFO: [Preview][r2] Starting session to 10.85.58.239
+INFO: [Preview][r2] Sending 'show log'
+INFO: [Preview][r2] Check command output for pattern '%PKT_INFRA-LINK'
+INFO: [Preview][r2] Closed session
 ```
 
-By default, sdwan_config_build will not override a target config file if it is already present. The --update (or -u) 
-flag changes this behavior override any pre-existing target files.
+The apply option execute the instructions determined by the spec file:
+```
+(venv) % trawl apply   
+Device username: cisco
+Device password: 
+INFO: [r1] Starting session to 10.85.58.240
+INFO: Connected (version 2.0, client Cisco-2.0)
+INFO: Authentication (password) successful!
+INFO: [r1] Sending 'show log'
+INFO: [r1] Pattern '%PKT_INFRA-LINK' did not match
+INFO: [r1] Closed session
+INFO: [r2] Starting session to 10.85.58.239
+INFO: Connected (version 2.0, client Cisco-2.0)
+INFO: Authentication (password) successful!
+INFO: [r2] Sending 'show log'
+INFO: [r2] Pattern '%PKT_INFRA-LINK' matched 317 times, first match: %PKT_INFRA-LINK
+INFO: [r2] Closed session
+WARNING: Pattern matches found in the output from r2
+INFO: Saved output from commands to 'output_20230213.txt'
+```
+
+The schema option generates a JSON schema describing all options available in the spec file:
+```
+(venv) % trawl schema
+INFO: Saved spec file schema as 'spec_file_schema.json'
+```
