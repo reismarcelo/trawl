@@ -1,0 +1,10 @@
+devices:
+  r1:
+    address: 10.85.58.240
+  r2:
+    address: 10.85.58.239
+
+
+commands:
+  - cmd: "show log"
+    find: "%PKT_INFRA-LINK"

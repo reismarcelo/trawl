@@ -1,0 +1,38 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "trawl"
+description = "Capture CLI commands and search for configurable patterns"
+license = "MIT"
+classifiers = [
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Topic :: System :: Networking",
+    "Typing :: Typed",
+    "Development Status :: 4 - Beta"
+]
+keywords = ["cisco", "network", "cli"]
+requires-python = ">=3.8"
+dependencies = [
+    "netmiko",
+    "PyYAML",
+    "pydantic"
+]
+dynamic = ["version"]
+
+[project.scripts]
+trawl = "trawl.__main__:main"
+
+[tool.hatch.version]
+path = "src/trawl/__version__.py"
+
+[tool.hatch.build.targets.sdist]
+include = [
+    "/src",
+]
