@@ -1,3 +1,6 @@
+# Trawl work directories
+sandbox/
+
 # Created by .ignore support plugin (hsz.mobi)
 build/
 dist/

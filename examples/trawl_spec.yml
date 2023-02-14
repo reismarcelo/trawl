@@ -6,5 +6,5 @@ devices:
 
 
 commands:
-  - cmd: "show log"
+  - send: "show log"
     find: "%PKT_INFRA-LINK"

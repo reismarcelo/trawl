@@ -115,3 +115,26 @@ The schema option generates a JSON schema describing all options available in th
 (venv) % trawl schema
 INFO: Saved spec file schema as 'spec_file_schema.json'
 ```
+
+## Spec file
+
+The examples directory contain a sample trawl_spec.yml file, with similar contents as below:
+
+```yaml
+---
+devices:
+  r1:
+    address: 10.85.58.240
+  r2:
+    address: 10.85.58.239
+
+
+commands:
+  - send: "show log"
+    find: "%PKT_INFRA-LINK"
+...
+```
+
+All commands in the 'commands' section are sent to each device listed in the 'devices' section. If a command contains 
+the 'find' keyword, the provided regular expression is used to search the command output.
+

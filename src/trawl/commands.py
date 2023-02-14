@@ -37,21 +37,25 @@ def apply_cmd(cli_args: argparse.Namespace) -> None:
             with ConnectHandler(device_type=node_info.device_type, host=str(node_info.address), username=cli_args.user,
                                 password=cli_args.password) as session:
                 for command in run_spec.commands:
-                    logger.info(f"[{node_name}] Sending '{command.cmd}'")
-                    output_buffer.append(f"### {node_name} - {command.cmd} ###")
+                    logger.info(f"[{node_name}] Sending '{command.send}'")
+                    output_buffer.append(f"### {node_name} - {command.send} ###")
 
-                    cmd_output = session.send_command(command.cmd)
-                    output_buffer.append(cmd_output)
-                    output_buffer.append("")
+                    cmd_output = session.send_command(command.send)
 
                     if command.find is not None:
                         matches = command.find.findall(cmd_output)
                         if matches:
-                            logger.info(f"[{node_name}] Pattern '{command.find.pattern}' matched {len(matches)} times, "
-                                        f"first match: {matches[0]}")
+                            match_info = (f"Pattern '{command.find.pattern}' found: {len(matches)} hits, first: "
+                                          f"{'| '.join(matches[0]) if isinstance(matches[0], tuple) else matches[0]}")
                             pattern_match_set.add(node_name)
                         else:
-                            logger.info(f"[{node_name}] Pattern '{command.find.pattern}' did not match")
+                            match_info = f"Pattern '{command.find.pattern}' not found"
+
+                        logger.info(f"[{node_name}] {match_info}")
+                        output_buffer.append(f"- {match_info}")
+
+                    output_buffer.append(cmd_output)
+                    output_buffer.append("")
 
         except (NetmikoBaseException, SSHException) as ex:
             logger.critical(f"[{node_name}] Connection error: {ex}")
@@ -60,9 +64,9 @@ def apply_cmd(cli_args: argparse.Namespace) -> None:
         output_buffer.append("")
 
     if pattern_match_set:
-        logger.warning(f"Pattern matches found in the output from these devices: {', '.join(sorted(pattern_match_set))}")
+        logger.warning(f"Search pattern found in the output from these devices: {', '.join(sorted(pattern_match_set))}")
     else:
-        logger.info("No pattern matches found in any device command output")
+        logger.info("Search patterns not found in any device command output")
 
     with open(cli_args.save, 'w') as f:
         f.write('\n'.join(output_buffer))
@@ -84,7 +88,7 @@ def preview_cmd(cli_args: argparse.Namespace) -> None:
     for node_name, node_info in run_spec.devices.items():
         logger.info(f"[Preview][{node_name}] Starting session to {node_info.address}")
         for command in run_spec.commands:
-            logger.info(f"[Preview][{node_name}] Sending '{command.cmd}'")
+            logger.info(f"[Preview][{node_name}] Sending '{command.send}'")
 
             if command.find is not None:
                 logger.info(f"[Preview][{node_name}] Check command output for pattern '{command.find.pattern}'")

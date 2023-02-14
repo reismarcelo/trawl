@@ -18,7 +18,7 @@ class DeviceConfigModel(BaseModel):
 
 
 class CommandModel(BaseModel):
-    cmd: constr(strip_whitespace=True, min_length=2)
+    send: constr(strip_whitespace=True, min_length=2)
     find: Optional[Pattern] = None
 
 
