@@ -138,3 +138,66 @@ commands:
 All commands in the 'commands' section are sent to each device listed in the 'devices' section. If a command contains 
 the 'find' keyword, the provided regular expression is used to search the command output.
 
+## Container Build
+
+```
+% docker build -t trawl .                                                                            
+[+] Building 33.1s (11/11) FINISHED                                                                                                                       
+ => [internal] load build definition from Dockerfile                                                                                                 0.0s
+ => => transferring dockerfile: 684B                                                                                                                 0.0s
+ => [internal] load .dockerignore                                                                                                                    0.0s
+ => => transferring context: 2B                                                                                                                      0.0s
+ => [internal] load metadata for docker.io/library/python:3.11-alpine                                                                                1.7s               
+<snip>
+```
+
+### Running
+
+The trawl-run.sh script can be used to run trawl commands inside the container. Any option passed to trawl-run.sh is 
+provided to the trawl command line:
+```
+% ./trawl-run.sh --version
+Trawl Version 1.1
+
+% ./trawl-run.sh preview  
+INFO: [Preview][r1] Starting session to 10.85.58.240
+INFO: [Preview][r1] Sending 'show log'
+INFO: [Preview][r1] Check command output for pattern '%PKT_INFRA-LINK'
+INFO: [Preview][r1] Closed session
+INFO: [Preview][r2] Starting session to 10.85.58.239
+INFO: [Preview][r2] Sending 'show log'
+INFO: [Preview][r2] Check command output for pattern '%PKT_INFRA-LINK'
+INFO: [Preview][r2] Closed session
+
+% ./trawl-run.sh apply  
+Device password: 
+INFO: [r1] Starting session to 10.85.58.240
+INFO: Connected (version 2.0, client Cisco-2.0)
+INFO: Authentication (password) successful!
+INFO: [r1] Sending 'show log'
+INFO: [r1] Pattern '%PKT_INFRA-LINK' not found
+INFO: [r1] Closed session
+INFO: [r2] Starting session to 10.85.58.239
+INFO: Connected (version 2.0, client Cisco-2.0)
+INFO: Authentication (password) successful!
+INFO: [r2] Sending 'show log'
+INFO: [r2] Pattern '%PKT_INFRA-LINK' found: 317 hits, first: %PKT_INFRA-LINK
+INFO: [r2] Closed session
+WARNING: Search pattern found in the output from these devices: r2
+INFO: Saved output from commands to 'output_20230215.txt'
+```
+
+### Troubleshooting
+
+For troubleshooting, one can manually run the container image without any option, landing on a bash shell inside the container.
+
+Create host directory to be mounted into the container:
+```
+% mkdir trawl-data
+```
+
+Start the container:
+```
+docker run -it --rm --hostname trawl --mount type=bind,source="$(pwd)"/trawl-data,target=/shared-data trawl:latest
+
+```
