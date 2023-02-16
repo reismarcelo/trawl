@@ -33,15 +33,21 @@ def apply_cmd(cli_args: argparse.Namespace) -> None:
     pattern_match_set: Set[str] = set()
     for node_name, node_info in run_spec.devices.items():
         logger.info(f"[{node_name}] Starting session to {node_info.address}")
+        session_args = {
+            'device_type': node_info.device_type,
+            'host':  str(node_info.address),
+            'username': cli_args.user,
+            'password': cli_args.password
+        }
         try:
-            with ConnectHandler(device_type=node_info.device_type, host=str(node_info.address), username=cli_args.user,
-                                password=cli_args.password) as session:
+            with ConnectHandler(**session_args) as session:
                 for command in run_spec.commands:
                     logger.info(f"[{node_name}] Sending '{command.send}'")
                     output_buffer.append(f"### {node_name} - {command.send} ###")
 
-                    cmd_output = session.send_command(command.send)
-
+                    cmd_output = session.send_command(command.send,
+                                                      expect_string=command.prompt_pattern,
+                                                      read_timeout=command.timeout)
                     if command.find is not None:
                         matches = command.find.findall(cmd_output)
                         if matches:
@@ -88,7 +94,12 @@ def preview_cmd(cli_args: argparse.Namespace) -> None:
     for node_name, node_info in run_spec.devices.items():
         logger.info(f"[Preview][{node_name}] Starting session to {node_info.address}")
         for command in run_spec.commands:
-            logger.info(f"[Preview][{node_name}] Sending '{command.send}'")
+            extra_info = ""
+            if 'prompt_pattern' in command.__fields_set__:
+                extra_info += f", prompt pattern: {command.prompt_pattern.pattern}"
+            if 'timeout' in command.__fields_set__:
+                extra_info += f", timeout: {command.timeout}"
+            logger.info(f"[Preview][{node_name}] Sending '{command.send}'{extra_info}")
 
             if command.find is not None:
                 logger.info(f"[Preview][{node_name}] Check command output for pattern '{command.find.pattern}'")

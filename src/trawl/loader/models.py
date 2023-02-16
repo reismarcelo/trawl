@@ -18,8 +18,10 @@ class DeviceConfigModel(BaseModel):
 
 
 class CommandModel(BaseModel):
-    send: constr(strip_whitespace=True, min_length=2)
+    send: constr(strip_whitespace=True, min_length=1)
+    prompt_pattern: Optional[Pattern] = None
     find: Optional[Pattern] = None
+    timeout: float = 10
 
 
 #

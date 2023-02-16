@@ -8,3 +8,5 @@ devices:
 commands:
   - send: "show log"
     find: "%PKT_INFRA-LINK"
+    timeout: 60
+
