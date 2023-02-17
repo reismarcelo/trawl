@@ -1,8 +1,9 @@
 import argparse
 import logging
 from typing import List, Set
+from pathlib import Path
 from paramiko.ssh_exception import SSHException
-from netmiko import ConnectHandler, NetmikoBaseException, file_transfer
+from netmiko import ConnectHandler, NetmikoBaseException, file_transfer, SCPConn
 from .loader import load_yaml, LoaderException, ConfigModel
 
 
@@ -28,6 +29,9 @@ def apply_cmd(cli_args: argparse.Namespace) -> None:
     for prompt_arg in cli_args.prompt_arguments:
         if getattr(cli_args, prompt_arg.argument) is None:
             setattr(cli_args, prompt_arg.argument, prompt_arg())
+
+    base_dir = Path(cli_args.save)
+    base_dir.mkdir(parents=True, exist_ok=True)
 
     output_buffer: List[str] = []
     pattern_match_set: Set[str] = set()
@@ -65,13 +69,35 @@ def apply_cmd(cli_args: argparse.Namespace) -> None:
 
                 for download in (d for d in run_spec.downloads if not d.devices or node_name in d.devices):
                     logger.info(f"[{node_name}] Downloading '{download.directory}/{download.filename}'")
-                    transfer_result = file_transfer(session, direction='get', overwrite_file=True,
-                                                    source_file=download.filename,
-                                                    dest_file=download.filename,
-                                                    file_system=download.directory,
-                                                    socket_timeout=download.timeout)
-                    logger.info(f"[{node_name}] Download "
-                                f"{'complete' if transfer_result['file_transferred'] else 'not needed'}")
+
+                    download_dir = Path(base_dir, node_name)
+                    download_dir.mkdir(parents=True, exist_ok=True)
+
+                    if download.alt_method:
+                        scp_session = SCPConn(session, socket_timeout=download.timeout)
+                        try:
+                            scp_session.scp_get_file(source_file=f'{download.directory}/{download.filename}',
+                                                     dest_file=f"{download_dir}/{download.filename}")
+                        except EOFError:
+                            pass
+                        finally:
+                            scp_session.close()
+
+                        logger.info(f"[{node_name}] Download complete")
+                    else:
+                        try:
+                            transfer_result = file_transfer(session,
+                                                            direction='get',
+                                                            file_system=download.directory,
+                                                            source_file=download.filename,
+                                                            dest_file=f"{download_dir}/{download.filename}",
+                                                            socket_timeout=download.timeout,
+                                                            verify_file=download.checksum,
+                                                            overwrite_file=download.overwrite)
+                            logger.info(f"[{node_name}] Download "
+                                        f"{'complete' if transfer_result['file_transferred'] else 'not needed'}")
+                        except EOFError:
+                            pass
 
         except (NetmikoBaseException, SSHException) as ex:
             logger.critical(f"[{node_name}] Connection error: {ex}")
@@ -86,8 +112,9 @@ def apply_cmd(cli_args: argparse.Namespace) -> None:
     else:
         logger.info("Search patterns not found in any device command output")
 
-    with open(cli_args.save, 'w') as f:
+    with open(Path(base_dir, 'command_output.txt'), 'w') as f:
         f.write('\n'.join(output_buffer))
+
     logger.info(f"Saved output from commands to '{cli_args.save}'")
 
 
@@ -106,18 +133,25 @@ def preview_cmd(cli_args: argparse.Namespace) -> None:
     for node_name, node_info in run_spec.devices.items():
         logger.info(f"[Preview][{node_name}] Starting session to {node_info.address}")
         for command in run_spec.commands:
-            extra_info = ""
+            options = ""
             if 'prompt_pattern' in command.__fields_set__:
-                extra_info += f", prompt pattern: {command.prompt_pattern.pattern}"
+                options += f", prompt pattern: {command.prompt_pattern.pattern}"
             if 'timeout' in command.__fields_set__:
-                extra_info += f", timeout: {command.timeout}"
-            logger.info(f"[Preview][{node_name}] Sending '{command.send}'{extra_info}")
+                options += f", timeout: {command.timeout}"
+            logger.info(f"[Preview][{node_name}] Sending '{command.send}'{options}")
 
             if command.find is not None:
                 logger.info(f"[Preview][{node_name}] Check command output for pattern '{command.find.pattern}'")
 
         for download in (d for d in run_spec.downloads if not d.devices or node_name in d.devices):
-            logger.info(f"[Preview][{node_name}] Downloading '{download.directory}/{download.filename}'")
+            options = ""
+            if 'checksum' in download.__fields_set__:
+                options += f", checksum: {download.checksum}"
+            if 'overwrite' in download.__fields_set__:
+                options += f", overwrite: {download.overwrite}"
+            if 'timeout' in download.__fields_set__:
+                options += f", timeout: {download.timeout}"
+            logger.info(f"[Preview][{node_name}] Downloading '{download.directory}/{download.filename}'{options}")
 
         logger.info(f"[Preview][{node_name}] Closed session")
 
