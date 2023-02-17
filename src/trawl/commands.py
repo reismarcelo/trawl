@@ -2,7 +2,7 @@ import argparse
 import logging
 from typing import List, Set
 from paramiko.ssh_exception import SSHException
-from netmiko import ConnectHandler, NetmikoBaseException
+from netmiko import ConnectHandler, NetmikoBaseException, file_transfer
 from .loader import load_yaml, LoaderException, ConfigModel
 
 
@@ -63,8 +63,20 @@ def apply_cmd(cli_args: argparse.Namespace) -> None:
                     output_buffer.append(cmd_output)
                     output_buffer.append("")
 
+                for download in (d for d in run_spec.downloads if not d.devices or node_name in d.devices):
+                    logger.info(f"[{node_name}] Downloading '{download.directory}/{download.filename}'")
+                    transfer_result = file_transfer(session, direction='get', overwrite_file=True,
+                                                    source_file=download.filename,
+                                                    dest_file=download.filename,
+                                                    file_system=download.directory,
+                                                    socket_timeout=download.timeout)
+                    logger.info(f"[{node_name}] Download "
+                                f"{'complete' if transfer_result['file_transferred'] else 'not needed'}")
+
         except (NetmikoBaseException, SSHException) as ex:
             logger.critical(f"[{node_name}] Connection error: {ex}")
+        except ValueError as ex:
+            logger.critical(f"[{node_name}] Execution error: {ex}")
 
         logger.info(f"[{node_name}] Closed session")
         output_buffer.append("")
@@ -103,6 +115,9 @@ def preview_cmd(cli_args: argparse.Namespace) -> None:
 
             if command.find is not None:
                 logger.info(f"[Preview][{node_name}] Check command output for pattern '{command.find.pattern}'")
+
+        for download in (d for d in run_spec.downloads if not d.devices or node_name in d.devices):
+            logger.info(f"[Preview][{node_name}] Downloading '{download.directory}/{download.filename}'")
 
         logger.info(f"[Preview][{node_name}] Closed session")
 
