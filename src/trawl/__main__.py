@@ -7,6 +7,7 @@ import argparse
 import logging
 from datetime import datetime
 from getpass import getpass
+from pathlib import Path
 from .__version__ import __version__ as version
 from .commands import preview_cmd, apply_cmd, schema_cmd
 from . import app_config
@@ -25,6 +26,13 @@ def non_empty_type(src_str: str) -> str:
         raise argparse.ArgumentTypeError('Value cannot be empty.')
 
     return out_str
+
+
+def non_existing_file_type(filename: str) -> str:
+    if Path(filename).exists():
+        raise argparse.ArgumentTypeError(f'File "{filename}" already exists.')
+
+    return filename
 
 
 class EnvVar(argparse.Action):
@@ -81,8 +89,11 @@ def main():
                                    ' If neither is provided prompt for password.')
     apply_parser.add_argument("-f", "--file", metavar="<filename>", default=app_config.loader_config.spec_file,
                               help="spec file containing instructions to execute (default: %(default)s)")
-    apply_parser.add_argument("-s", "--save", metavar="<filename>", default=f"data_{datetime.now():%Y%m%d_%H%M%S}",
-                              help="save output from commands to file (default: %(default)s)")
+    apply_parser.add_argument("-s", "--save", metavar="<filename>", type=non_existing_file_type,
+                              default=f"data_{datetime.now():%Y%m%d_%H%M%S}.zip",
+                              help="save output to file (default: %(default)s)")
+    apply_parser.add_argument("--keep_tmp", action='store_true', help="keep temporary directories")
+
     apply_parser.set_defaults(prompt_arguments=[
         PromptArg('user', 'Device username: '),
         PromptArg('password', 'Device password: ', secure_prompt=True)

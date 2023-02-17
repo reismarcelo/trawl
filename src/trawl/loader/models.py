@@ -29,9 +29,6 @@ class DownloadModel(BaseModel, extra=Extra.forbid):
     directory: Optional[str] = None
     filename: str
     timeout: float = 30
-    checksum: bool = True
-    overwrite: bool = False
-    alt_method: bool = False
 
     @validator('devices')
     def devices_validator(cls, v: List[str]) -> List[str]:
