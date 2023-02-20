@@ -10,6 +10,7 @@ METADATA_CONFIG = """
 ---
 loader_config:
   spec_file: "trawl_spec.yml"
+  state_file: "state.yml"
 
 logging_config:
   version: 1

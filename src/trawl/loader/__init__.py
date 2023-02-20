@@ -3,7 +3,7 @@ import sys
 import yaml
 from typing import Any, TypeVar, Type, Union
 from pydantic import BaseModel, ValidationError
-from .models import ConfigModel
+from .models import ConfigModel, StateModel
 
 
 class LoaderException(Exception):
@@ -31,6 +31,7 @@ def load_yaml(model_cls: Type[M], description: str, filename: Union[os.PathLike,
 
 class LoaderConfigModel(BaseModel):
     spec_file: str
+    state_file: str
 
 
 class MetadataModel(BaseModel):

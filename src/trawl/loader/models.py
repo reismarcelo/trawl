@@ -1,4 +1,4 @@
-from typing import List, Dict, Pattern, Optional, Set
+from typing import List, Dict, Pattern, Optional, Set, Tuple
 from enum import Enum
 from ipaddress import IPv4Address
 from pydantic import BaseModel, constr, Extra, validator, Field
@@ -52,3 +52,11 @@ class ConfigModel(BaseModel, extra=Extra.forbid):
     def devices_cache(cls, v: Dict[str, DeviceConfigModel]) -> Dict[str, DeviceConfigModel]:
         _available_devices.update(v)
         return v
+
+
+#
+# Tracker Model
+#
+
+class StateModel(BaseModel, extra=Extra.forbid):
+    downloads: List[Tuple[str, str, str]]

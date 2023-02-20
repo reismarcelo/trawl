@@ -93,6 +93,8 @@ def main():
                               default=f"data_{datetime.now():%Y%m%d_%H%M%S}.zip",
                               help="save output to file (default: %(default)s)")
     apply_parser.add_argument("--keep_tmp", action='store_true', help="keep temporary directories")
+    apply_parser.add_argument("--state-file", metavar="<filename>", default=app_config.loader_config.state_file,
+                              help="state file (default: %(default)s)")
 
     apply_parser.set_defaults(prompt_arguments=[
         PromptArg('user', 'Device username: '),

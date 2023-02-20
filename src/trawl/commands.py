@@ -1,14 +1,15 @@
 import argparse
 import logging
 import re
-from typing import List, Set, Iterable, Optional, Pattern
+from typing import List, Set, Iterable, Optional, Pattern, NamedTuple
 from pathlib import Path
 from shutil import rmtree
 from uuid import uuid4
 from zipfile import ZipFile, ZIP_DEFLATED
+import yaml
 from paramiko.ssh_exception import SSHException
 from netmiko import ConnectHandler, NetmikoBaseException, SCPConn, BaseConnection
-from .loader import load_yaml, LoaderException, ConfigModel
+from .loader import load_yaml, LoaderException, ConfigModel, StateModel
 
 
 logger = logging.getLogger('trawl.commands')
@@ -29,6 +30,12 @@ def apply_cmd(cli_args: argparse.Namespace) -> None:
     except LoaderException as ex:
         logger.critical(f"Failed loading spec file: {ex}")
         return
+
+    downloaded_set: Set[DownloadedFileInfo]
+    try:
+        downloaded_set = {file_info for file_info in load_yaml(StateModel, 'state', cli_args.state_file).downloads}
+    except LoaderException:
+        downloaded_set = set()
 
     # Temporary directory
     base_path = Path(str(uuid4()))
@@ -84,11 +91,17 @@ def apply_cmd(cli_args: argparse.Namespace) -> None:
                     dir_output = session.send_command(f"dir {download.directory}", read_timeout=download.timeout)
 
                     for filename in match_files(dir_output, file_pattern=download.file_pattern):
+                        download_info = DownloadedFileInfo(node_name, download.directory, filename)
+                        if download_info in downloaded_set:
+                            logger.debug(f"[{node_name}] Download '{download.directory}/{filename}' skipped")
+                            continue
+
                         succeeded = scp_get_file(session,
                                                  src_file=f'{download.directory}/{filename}',
                                                  dst_file=str(Path(download_path, filename)),
                                                  timeout=download.timeout)
                         if succeeded:
+                            downloaded_set.add(download_info)
                             logger.info(f"[{node_name}] Download '{download.directory}/{filename}' complete")
                         else:
                             logger.warning(f"[{node_name}] Download '{download.directory}/{filename}' failed")
@@ -106,6 +119,9 @@ def apply_cmd(cli_args: argparse.Namespace) -> None:
 
     with open(Path(base_path, 'command_output.txt'), 'w') as f:
         f.write('\n'.join(output_buffer))
+
+    with open(cli_args.state_file, 'w') as state_f:
+        yaml.safe_dump(StateModel(downloads=list(downloaded_set)).dict(), state_f)
 
     archive_create(cli_args.save, base_path)
     if not cli_args.keep_tmp:
@@ -133,7 +149,7 @@ def preview_cmd(cli_args: argparse.Namespace) -> None:
             if 'prompt_pattern' in command.__fields_set__:
                 options += f", prompt pattern: {command.prompt_pattern.pattern}"
             if 'timeout' in command.__fields_set__:
-                options += f", timeout: {command.timeout}"
+                options += f", timeout: {command.timeout:.0f}s"
             logger.info(f"[Preview][{node_name}] Sending '{command.send}'{options}")
 
             if command.find is not None:
@@ -142,7 +158,7 @@ def preview_cmd(cli_args: argparse.Namespace) -> None:
         for download in (d for d in run_spec.downloads if not d.devices or node_name in d.devices):
             options = ""
             if 'timeout' in download.__fields_set__:
-                options += f", timeout: {download.timeout}"
+                options += f", timeout: {download.timeout:.0f}s"
 
             if download.file_pattern is None:
                 logger.info(f"[Preview][{node_name}] Downloading all files in '{download.directory}'{options}")
@@ -199,3 +215,10 @@ def archive_create(archive_filename: str, src_dir: Path) -> None:
             archive_file.write(member_path, arcname=member_path.relative_to(src_dir))
 
     return
+
+
+class DownloadedFileInfo(NamedTuple):
+    device: str
+    directory: str
+    filename: str
+
