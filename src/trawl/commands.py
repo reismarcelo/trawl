@@ -1,6 +1,7 @@
 import argparse
 import logging
-from typing import List, Set
+import re
+from typing import List, Set, Iterable, Optional, Pattern
 from pathlib import Path
 from shutil import rmtree
 from uuid import uuid4
@@ -72,19 +73,25 @@ def apply_cmd(cli_args: argparse.Namespace) -> None:
                     output_buffer.append("")
 
                 for download in (d for d in run_spec.downloads if not d.devices or node_name in d.devices):
-                    logger.info(f"[{node_name}] Downloading '{download.directory}/{download.filename}'")
+                    if download.file_pattern is None:
+                        logger.info(f"[{node_name}] Downloading all files in '{download.directory}'")
+                    else:
+                        logger.info(f"[{node_name}] Downloading files matching "
+                                    f"'{download.directory}/{download.file_pattern.pattern}'")
 
                     download_path = Path(base_path, node_name)
                     download_path.mkdir(parents=True, exist_ok=True)
+                    dir_output = session.send_command(f"dir {download.directory}", read_timeout=download.timeout)
 
-                    succeeded = scp_get_file(session,
-                                             src_file=f'{download.directory}/{download.filename}',
-                                             dst_file=str(Path(download_path, download.filename)),
-                                             timeout=download.timeout)
-                    if succeeded:
-                        logger.info(f"[{node_name}] Download complete")
-                    else:
-                        logger.warning(f"[{node_name}] Download failed")
+                    for filename in match_files(dir_output, file_pattern=download.file_pattern):
+                        succeeded = scp_get_file(session,
+                                                 src_file=f'{download.directory}/{filename}',
+                                                 dst_file=str(Path(download_path, filename)),
+                                                 timeout=download.timeout)
+                        if succeeded:
+                            logger.info(f"[{node_name}] Download '{download.directory}/{filename}' complete")
+                        else:
+                            logger.warning(f"[{node_name}] Download '{download.directory}/{filename}' failed")
 
         except (NetmikoBaseException, SSHException) as ex:
             logger.critical(f"[{node_name}] Connection error: {ex}")
@@ -136,7 +143,12 @@ def preview_cmd(cli_args: argparse.Namespace) -> None:
             options = ""
             if 'timeout' in download.__fields_set__:
                 options += f", timeout: {download.timeout}"
-            logger.info(f"[Preview][{node_name}] Downloading '{download.directory}/{download.filename}'{options}")
+
+            if download.file_pattern is None:
+                logger.info(f"[Preview][{node_name}] Downloading all files in '{download.directory}'{options}")
+            else:
+                logger.info(f"[Preview][{node_name}] Downloading files matching "
+                            f"'{download.directory}/{download.file_pattern.pattern}'{options}")
 
         logger.info(f"[Preview][{node_name}] Closed session")
 
@@ -156,6 +168,13 @@ def schema_cmd(cli_args: argparse.Namespace) -> None:
 #
 # Utility functions
 #
+
+def match_files(dir_cmd_output: str, file_pattern: Optional[Pattern] = None) -> Iterable[str]:
+    dir_cmd_pattern = re.compile(r'^\d+\s+-[rwx-]{3}\s+\d+\s+(?:\S+\s+){5}(.+)\s*$', flags=re.MULTILINE)
+    return (
+        file for file in dir_cmd_pattern.findall(dir_cmd_output) if file_pattern is None or file_pattern.search(file)
+    )
+
 
 def scp_get_file(ssh_con: BaseConnection, src_file: str, dst_file: str, timeout: float) -> bool:
     scp_session = SCPConn(ssh_con, socket_timeout=timeout)

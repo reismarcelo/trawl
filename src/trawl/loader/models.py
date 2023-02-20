@@ -27,7 +27,7 @@ class CommandModel(BaseModel, extra=Extra.forbid):
 class DownloadModel(BaseModel, extra=Extra.forbid):
     devices: Optional[List[str]] = None
     directory: Optional[str] = None
-    filename: str
+    file_pattern: Optional[Pattern] = None
     timeout: float = 30
 
     @validator('devices')
