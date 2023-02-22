@@ -53,7 +53,8 @@ def apply_cmd(cli_args: argparse.Namespace) -> None:
             'device_type': node_info.device_type,
             'host':  str(node_info.address),
             'username': cli_args.user,
-            'password': cli_args.password
+            'password': cli_args.password,
+            'ssh_config_file': cli_args.ssh_config_file
         }
         try:
             with ConnectHandler(**session_args) as session:
@@ -88,7 +89,10 @@ def apply_cmd(cli_args: argparse.Namespace) -> None:
 
                     download_path = Path(base_path, node_name)
                     download_path.mkdir(parents=True, exist_ok=True)
-                    dir_output = session.send_command(f"dir {download.directory}", read_timeout=download.timeout)
+                    session.find_prompt()
+                    dir_output = session.send_command(f"dir {download.directory}",
+                                                      expect_string=cli_args.download_prompt_pattern,
+                                                      read_timeout=download.timeout)
 
                     for filename in match_files(dir_output, file_pattern=download.file_pattern):
                         download_info = DownloadedFileInfo(node_name, download.directory, filename)
@@ -186,7 +190,7 @@ def schema_cmd(cli_args: argparse.Namespace) -> None:
 #
 
 def match_files(dir_cmd_output: str, file_pattern: Optional[Pattern] = None) -> Iterable[str]:
-    dir_cmd_pattern = re.compile(r'^\d+\s+-[rwx-]{3}\s+\d+\s+(?:\S+\s+){5}(.+)\s*$', flags=re.MULTILINE)
+    dir_cmd_pattern = re.compile(r'^\s*\d+\s+-(?:\S+\s+)+?(\S+)\s*$', flags=re.MULTILINE)
     return (
         file for file in dir_cmd_pattern.findall(dir_cmd_output) if file_pattern is None or file_pattern.search(file)
     )

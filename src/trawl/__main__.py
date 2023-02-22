@@ -35,6 +35,13 @@ def non_existing_file_type(filename: str) -> str:
     return filename
 
 
+def existing_file_type(filename: str) -> str:
+    if not Path(filename).exists():
+        raise argparse.ArgumentTypeError(f'File "{filename}" not found.')
+
+    return filename
+
+
 class EnvVar(argparse.Action):
     def __init__(self, nargs=None, envvar=None, required=True, default=None, **kwargs):
         if nargs is not None:
@@ -95,6 +102,10 @@ def main():
     apply_parser.add_argument("--keep_tmp", action='store_true', help="keep temporary directories")
     apply_parser.add_argument("--state-file", metavar="<filename>", default=app_config.loader_config.state_file,
                               help="state file (default: %(default)s)")
+    apply_parser.add_argument("--ssh-config-file", metavar="<filename>", type=existing_file_type,
+                              help="custom ssh configuration file to use")
+    apply_parser.add_argument("--download-prompt-pattern", metavar="<regex>",
+                              help="regex used to determine prompt in the download phase")
 
     apply_parser.set_defaults(prompt_arguments=[
         PromptArg('user', 'Device username: '),
