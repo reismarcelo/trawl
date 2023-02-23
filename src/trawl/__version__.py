@@ -1,2 +1,2 @@
 __copyright__ = "Copyright (c) 2023 Cisco Systems, Inc. and/or its affiliates"
-__version__ = "1.9.1"
+__version__ = "1.9.2"
