@@ -65,6 +65,7 @@ def apply_cmd(cli_args: argparse.Namespace) -> None:
                     cmd_output = session.send_command(command.send,
                                                       expect_string=command.prompt_pattern,
                                                       read_timeout=command.timeout)
+                    session.find_prompt()
                     if command.find is not None:
                         matches = command.find.findall(cmd_output)
                         if matches:
