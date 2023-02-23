@@ -105,6 +105,7 @@ def apply_cmd(cli_args: argparse.Namespace) -> None:
                                                  src_file=f'{download.directory}/{filename}',
                                                  dst_file=str(Path(download_path, filename)),
                                                  timeout=download.timeout)
+                        session.find_prompt()
                         if succeeded:
                             downloaded_set.add(download_info)
                             logger.info(f"[{node_name}] Download '{download.directory}/{filename}' complete")
