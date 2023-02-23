@@ -99,7 +99,7 @@ def main():
     apply_parser.add_argument("-s", "--save", metavar="<filename>", type=non_existing_file_type,
                               default=f"data_{datetime.now():%Y%m%d_%H%M%S}.zip",
                               help="save output to file (default: %(default)s)")
-    apply_parser.add_argument("--keep_tmp", action='store_true', help="keep temporary directories")
+    apply_parser.add_argument("--keep-tmp", action='store_true', help="keep temporary directories")
     apply_parser.add_argument("--state-file", metavar="<filename>", default=app_config.loader_config.state_file,
                               help="state file (default: %(default)s)")
     apply_parser.add_argument("--ssh-config-file", metavar="<filename>", type=existing_file_type,

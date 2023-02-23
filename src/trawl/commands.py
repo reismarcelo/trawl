@@ -37,13 +37,13 @@ def apply_cmd(cli_args: argparse.Namespace) -> None:
     except LoaderException:
         downloaded_set = set()
 
-    # Temporary directory
-    base_path = Path(str(uuid4()))
-    base_path.mkdir(parents=True)
-
     for prompt_arg in cli_args.prompt_arguments:
         if getattr(cli_args, prompt_arg.argument) is None:
             setattr(cli_args, prompt_arg.argument, prompt_arg())
+
+    # Temporary directory
+    base_path = Path(str(uuid4()))
+    base_path.mkdir(parents=True)
 
     output_buffer: List[str] = []
     pattern_match_set: Set[str] = set()
