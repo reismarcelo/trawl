@@ -141,7 +141,7 @@ the 'find' keyword, the provided regular expression is used to search the comman
 ## Container Build
 
 ```
-% docker build -t trawl .                                                                            
+% docker build --no-cache -t trawl .                                                                           
 [+] Building 33.1s (11/11) FINISHED                                                                                                                       
  => [internal] load build definition from Dockerfile                                                                                                 0.0s
  => => transferring dockerfile: 684B                                                                                                                 0.0s

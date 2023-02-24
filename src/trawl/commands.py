@@ -62,10 +62,8 @@ def apply_cmd(cli_args: argparse.Namespace) -> None:
                     logger.info(f"[{node_name}] Sending '{command.send}'")
                     output_buffer.append(f"### {node_name} - {command.send} ###")
 
-                    cmd_output = session.send_command(command.send,
-                                                      expect_string=command.prompt_pattern,
-                                                      read_timeout=command.timeout)
-                    session.find_prompt()
+                    cmd_output = session.send_command_timing(command.send, read_timeout=command.timeout)
+
                     if command.find is not None:
                         matches = command.find.findall(cmd_output)
                         if matches:
@@ -91,10 +89,8 @@ def apply_cmd(cli_args: argparse.Namespace) -> None:
                     download_path = Path(base_path, node_name)
                     download_path.mkdir(parents=True, exist_ok=True)
                     session.find_prompt()
-                    dir_output = session.send_command(f"dir {download.directory}",
-                                                      expect_string=cli_args.download_prompt_pattern,
-                                                      read_timeout=download.timeout)
 
+                    dir_output = session.send_command_timing(f"dir {download.directory}", read_timeout=download.timeout)
                     for filename in match_files(dir_output, file_pattern=download.file_pattern):
                         download_info = DownloadedFileInfo(node_name, download.directory, filename)
                         if download_info in downloaded_set:
@@ -106,6 +102,7 @@ def apply_cmd(cli_args: argparse.Namespace) -> None:
                                                  dst_file=str(Path(download_path, filename)),
                                                  timeout=download.timeout)
                         session.find_prompt()
+
                         if succeeded:
                             downloaded_set.add(download_info)
                             logger.info(f"[{node_name}] Download '{download.directory}/{filename}' complete")
@@ -152,8 +149,6 @@ def preview_cmd(cli_args: argparse.Namespace) -> None:
         logger.info(f"[Preview][{node_name}] Starting session to {node_info.address}")
         for command in run_spec.commands:
             options = ""
-            if 'prompt_pattern' in command.__fields_set__:
-                options += f", prompt pattern: {command.prompt_pattern.pattern}"
             if 'timeout' in command.__fields_set__:
                 options += f", timeout: {command.timeout:.0f}s"
             logger.info(f"[Preview][{node_name}] Sending '{command.send}'{options}")
@@ -227,4 +222,3 @@ class DownloadedFileInfo(NamedTuple):
     device: str
     directory: str
     filename: str
-

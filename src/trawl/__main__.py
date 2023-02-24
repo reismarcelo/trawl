@@ -104,9 +104,6 @@ def main():
                               help="state file (default: %(default)s)")
     apply_parser.add_argument("--ssh-config-file", metavar="<filename>", type=existing_file_type,
                               help="custom ssh configuration file to use")
-    apply_parser.add_argument("--download-prompt-pattern", metavar="<regex>",
-                              help="regex used to determine prompt in the download phase")
-
     apply_parser.set_defaults(prompt_arguments=[
         PromptArg('user', 'Device username: '),
         PromptArg('password', 'Device password: ', secure_prompt=True)

@@ -19,16 +19,15 @@ class DeviceConfigModel(BaseModel, extra=Extra.forbid, use_enum_values=True):
 
 class CommandModel(BaseModel, extra=Extra.forbid):
     send: constr(strip_whitespace=True, min_length=1)
-    prompt_pattern: Optional[Pattern] = None
     find: Optional[Pattern] = None
-    timeout: float = 30
+    timeout: float = 120.0
 
 
 class DownloadModel(BaseModel, extra=Extra.forbid):
     devices: Optional[List[str]] = None
     directory: Optional[str] = None
     file_pattern: Optional[Pattern] = None
-    timeout: float = 30
+    timeout: float = 120.0
 
     @validator('devices')
     def devices_validator(cls, v: List[str]) -> List[str]:

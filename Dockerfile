@@ -11,7 +11,7 @@ FROM python:3.11-alpine
 
 COPY --from=build /build/trawl/dist /trawl-wheel
 
-RUN apk update && apk upgrade && apk add --no-cache bash && \
+RUN apk update && apk upgrade && apk add --no-cache openssh bash && \
     pip install --no-cache-dir --upgrade pip setuptools netmiko PyYAML pydantic && \
     pip install --no-cache-dir --upgrade --no-index --find-links /trawl-wheel trawl
 

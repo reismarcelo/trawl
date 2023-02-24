@@ -4,7 +4,6 @@ devices:
   r2:
     address: 10.85.58.239
 
-
 commands:
   - send: "show log"
     find: "%PKT_INFRA-LINK"
